@@ -12,3 +12,4 @@ C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\ref\UniRide.DAL.
 C:\Users\CRC\source\repos\UniRide\UniRide.DAL\bin\Debug\net10.0\UniRide.DAL.runtimeconfig.json
 C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.csproj.AssemblyReference.cache
 C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.genruntimeconfig.cache
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.sourcelink.json

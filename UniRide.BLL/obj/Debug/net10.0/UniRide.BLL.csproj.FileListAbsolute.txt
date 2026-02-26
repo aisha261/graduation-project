@@ -13,3 +13,4 @@ C:\Users\CRC\source\repos\UniRide\UniRide.BLL\obj\Debug\net10.0\UniRide.BLL.dll
 C:\Users\CRC\source\repos\UniRide\UniRide.BLL\obj\Debug\net10.0\refint\UniRide.BLL.dll
 C:\Users\CRC\source\repos\UniRide\UniRide.BLL\obj\Debug\net10.0\UniRide.BLL.pdb
 C:\Users\CRC\source\repos\UniRide\UniRide.BLL\obj\Debug\net10.0\ref\UniRide.BLL.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.BLL\obj\Debug\net10.0\UniRide.BLL.sourcelink.json

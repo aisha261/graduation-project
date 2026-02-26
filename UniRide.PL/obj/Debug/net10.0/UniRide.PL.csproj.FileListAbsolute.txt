@@ -165,3 +165,6 @@ C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\ru\Microsoft.Code
 C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\tr\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\zh-Hans\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
 C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\zh-Hant\Microsoft.CodeAnalysis.Workspaces.MSBuild.resources.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\BCrypt.Net-Next.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.PL\bin\Debug\net10.0\Microsoft.AspNetCore.Authentication.JwtBearer.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.PL\obj\Debug\net10.0\UniRide.PL.sourcelink.json
