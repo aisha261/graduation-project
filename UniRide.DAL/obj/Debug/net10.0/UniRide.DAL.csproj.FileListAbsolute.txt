@@ -1,0 +1,14 @@
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\bin\Debug\net10.0\UniRide.DAL.deps.json
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\bin\Debug\net10.0\UniRide.DAL.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\bin\Debug\net10.0\UniRide.DAL.pdb
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.GeneratedMSBuildEditorConfig.editorconfig
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.AssemblyInfoInputs.cache
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.AssemblyInfo.cs
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.csproj.CoreCompileInputs.cache
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\refint\UniRide.DAL.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.pdb
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\ref\UniRide.DAL.dll
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\bin\Debug\net10.0\UniRide.DAL.runtimeconfig.json
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.csproj.AssemblyReference.cache
+C:\Users\CRC\source\repos\UniRide\UniRide.DAL\obj\Debug\net10.0\UniRide.DAL.genruntimeconfig.cache
