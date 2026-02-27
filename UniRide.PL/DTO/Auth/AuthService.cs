@@ -1,17 +1,82 @@
-using System.Runtime.InteropServices;
+﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
+using System.Text;
+using UniRide.DAL.Data;
 
-// In SDK-style projects such as this one, several assembly attributes that were historically
-// defined in this file are now automatically added during build and populated with
-// values defined in project properties. For details of which attributes are included
-// and how to customise this process see: https://aka.ms/assembly-info-properties
+namespace UniRide.PL.DTO.Auth
+{
+    public class AuthService
+    {
+        private readonly ApplicationDbContext _db;
+        private readonly IConfiguration _config;
 
+        public AuthService(ApplicationDbContext db, IConfiguration config)
+        {
+            _db = db;
+            _config = config;
+        }
 
-// Setting ComVisible to false makes the types in this assembly not visible to COM
-// components.  If you need to access a type in this assembly from COM, set the ComVisible
-// attribute to true on that type.
+        public async Task<AuthResponseDto?> LoginAsync(LoginRequestDto dto)
+        {
+            var input = dto.EmailOrPhone.Trim();
 
-[assembly: ComVisible(false)]
+            // Email OR Phone
+            var user = await _db.Users.FirstOrDefaultAsync(u =>
+                u.Email == input || (u.Phone != null && u.Phone == input));
 
-// The following GUID is for the ID of the typelib if this project is exposed to COM.
+            if (user == null)
+                return null;
 
-[assembly: Guid("cf0b0d25-0a37-4cda-9d73-af95ab7b189e")]
+            // Verify password (BCrypt)
+            var ok = BCrypt.Net.BCrypt.Verify(dto.Password, user.PasswordHash);
+            if (!ok)
+                return null;
+
+            var durationMinutes = int.Parse(_config["Jwt:DurationInMinutes"]!);
+            if (dto.RememberMe)
+                durationMinutes = Math.Max(durationMinutes, 60 * 24 * 7); // أسبوع
+
+            var expiresAtUtc = DateTime.UtcNow.AddMinutes(durationMinutes);
+            var token = GenerateJwtToken(user, expiresAtUtc);
+
+            return new AuthResponseDto
+            {
+                UserId = user.Id,
+                FullName = user.FullName,
+                Email = user.Email,
+                Phone = user.Phone,
+                Role = user.Role.ToString(),
+                Token = token,
+                ExpiresAtUtc = expiresAtUtc,
+                Message = "Success"
+            };
+        }
+
+        private string GenerateJwtToken(dynamic user, DateTime expiresAtUtc)
+        {
+            var keyBytes = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+            var key = new SymmetricSecurityKey(keyBytes);
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: expiresAtUtc,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
+        }
+    }
+}
