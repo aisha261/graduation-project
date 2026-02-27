@@ -2679,24 +2679,19 @@
     ]
   },
   "packageFolders": {
-    "C:\\Users\\CRC\\.nuget\\packages\\": {},
-    "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages": {}
+    "C:\\Users\\hp\\.nuget\\packages\\": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "C:\\Users\\CRC\\source\\repos\\UniRide\\UniRide.BLL\\UniRide.BLL.csproj",
+      "projectUniqueName": "C:\\Users\\hp\\Desktop\\uni ride\\UniRide.BLL\\UniRide.BLL.csproj",
       "projectName": "UniRide.BLL",
-      "projectPath": "C:\\Users\\CRC\\source\\repos\\UniRide\\UniRide.BLL\\UniRide.BLL.csproj",
-      "packagesPath": "C:\\Users\\CRC\\.nuget\\packages\\",
-      "outputPath": "C:\\Users\\CRC\\source\\repos\\UniRide\\UniRide.BLL\\obj\\",
+      "projectPath": "C:\\Users\\hp\\Desktop\\uni ride\\UniRide.BLL\\UniRide.BLL.csproj",
+      "packagesPath": "C:\\Users\\hp\\.nuget\\packages\\",
+      "outputPath": "C:\\Users\\hp\\Desktop\\uni ride\\UniRide.BLL\\obj\\",
       "projectStyle": "PackageReference",
-      "fallbackFolders": [
-        "C:\\Program Files (x86)\\Microsoft Visual Studio\\Shared\\NuGetPackages"
-      ],
       "configFilePaths": [
-        "C:\\Users\\CRC\\AppData\\Roaming\\NuGet\\NuGet.Config",
-        "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.FallbackLocation.config",
+        "C:\\Users\\hp\\AppData\\Roaming\\NuGet\\NuGet.Config",
         "C:\\Program Files (x86)\\NuGet\\Config\\Microsoft.VisualStudio.Offline.config"
       ],
       "originalTargetFrameworks": [
@@ -2710,8 +2705,8 @@
         "net8.0": {
           "targetAlias": "net8.0",
           "projectReferences": {
-            "C:\\Users\\CRC\\source\\repos\\UniRide\\UniRide.DAL\\UniRide.DAL.csproj": {
-              "projectPath": "C:\\Users\\CRC\\source\\repos\\UniRide\\UniRide.DAL\\UniRide.DAL.csproj"
+            "C:\\Users\\hp\\Desktop\\uni ride\\UniRide.DAL\\UniRide.DAL.csproj": {
+              "projectPath": "C:\\Users\\hp\\Desktop\\uni ride\\UniRide.DAL\\UniRide.DAL.csproj"
             }
           }
         }
@@ -2726,7 +2721,7 @@
         "auditLevel": "low",
         "auditMode": "direct"
       },
-      "SdkAnalysisLevel": "10.0.200"
+      "SdkAnalysisLevel": "9.0.300"
     },
     "frameworks": {
       "net8.0": {
@@ -2742,26 +2737,12 @@
         ],
         "assetTargetFallback": true,
         "warn": true,
-        "downloadDependencies": [
-          {
-            "name": "Microsoft.AspNetCore.App.Ref",
-            "version": "[8.0.23, 8.0.23]"
-          },
-          {
-            "name": "Microsoft.NETCore.App.Ref",
-            "version": "[8.0.23, 8.0.23]"
-          },
-          {
-            "name": "Microsoft.WindowsDesktop.App.Ref",
-            "version": "[8.0.23, 8.0.23]"
-          }
-        ],
         "frameworkReferences": {
           "Microsoft.NETCore.App": {
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\10.0.200-preview.0.26103.119/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "C:\\Program Files\\dotnet\\sdk\\9.0.311/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

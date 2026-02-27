@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using UniRide.DAL.Data;
@@ -14,10 +17,12 @@ namespace UniRide.PL.Controllers
     public class AuthController : ControllerBase
     {
         private readonly ApplicationDbContext _context;
+        private readonly IConfiguration _config;
 
-        public AuthController(ApplicationDbContext context)
+        public AuthController(ApplicationDbContext context, IConfiguration config)
         {
             _context = context;
+            _config = config;
         }
 
         // POST: /api/auth/register
@@ -29,23 +34,25 @@ namespace UniRide.PL.Controllers
             if (emailExists)
                 return BadRequest(new { message = "Email already exists" });
 
-            // 2) تحقق: رقم الجامعة موجود؟ (إذا عندكم حقل UniversityId في User/AcademicProfile عدّلي حسبكم)
-            // إذا ما عندكم الحقل بالـ DB لسه، احذفي هذا الجزء مؤقتاً.
-            // bool uniIdExists = await _context.Users.AnyAsync(u => u.UniversityId == request.UniversityId);
+            // 2) (اختياري) تحقق الهاتف لو بدك تمنعي تكرار رقم الهاتف
+            if (!string.IsNullOrWhiteSpace(request.Phone))
+            {
+                bool phoneExists = await _context.Users.AnyAsync(u => u.Phone != null && u.Phone == request.Phone);
+                if (phoneExists)
+                    return BadRequest(new { message = "Phone already exists" });
+            }
 
-            // 3) حددي الدور من التاب (Student/Driver)
-            // افترضنا عندكم enum UserRole فيه Student و Driver
-            UserRole role;
-            if (!Enum.TryParse(request.Role, ignoreCase: true, out role))
+            // 3) Role
+            if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var role))
                 return BadRequest(new { message = "Invalid role" });
 
-            // 4) أنشئي المستخدم (Entity)
+            // 4) إنشاء User
             var user = new User
             {
-                FullName = request.FullName,
-                Email = request.Email,
-                Phone = request.Phone,
-                PasswordHash = HashPassword(request.Password),
+                FullName = request.FullName.Trim(),
+                Email = request.Email.Trim(),
+                Phone = string.IsNullOrWhiteSpace(request.Phone) ? null : request.Phone.Trim(),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 Role = role,
                 Status = AccountStatus.Active // أو Pending إذا بدكم
             };
@@ -53,7 +60,7 @@ namespace UniRide.PL.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // 5) إذا الدور Driver: ممكن تعملوا DriverProfile مباشرة (حسب نظامكم)
+            // 5) إذا Driver: إنشاء DriverProfile مبدئيًا
             bool? isVerified = null;
 
             if (role == UserRole.Driver)
@@ -61,7 +68,7 @@ namespace UniRide.PL.Controllers
                 var driverProfile = new DriverProfile
                 {
                     UserId = user.Id,
-                    LicenseNumber = "PENDING",          // مؤقت لحين شاشة رفع البيانات
+                    LicenseNumber = "PENDING",
                     VehiclePlate = "PENDING",
                     VehicleModel = "PENDING",
                     DriverPhotoUrl = "PENDING",
@@ -75,15 +82,18 @@ namespace UniRide.PL.Controllers
                 isVerified = driverProfile.IsVerified;
             }
 
-            // 6) Response DTO
+            // 6) Response (بدون توكن عادة بالتسجيل)
             var response = new AuthResponseDto
             {
                 UserId = user.Id,
                 FullName = user.FullName,
                 Email = user.Email,
+                Phone = user.Phone,
                 Role = user.Role.ToString(),
                 Status = user.Status.ToString(),
                 IsVerified = isVerified,
+                Token = string.Empty,
+                ExpiresAtUtc = DateTime.UtcNow,
                 Message = "Registered successfully"
             };
 
@@ -94,18 +104,24 @@ namespace UniRide.PL.Controllers
         [HttpPost("login")]
         public async Task<ActionResult<AuthResponseDto>> Login([FromBody] LoginRequestDto request)
         {
+            var input = request.EmailOrPhone?.Trim();
+
+            if (string.IsNullOrWhiteSpace(input))
+                return BadRequest(new { message = "EmailOrPhone is required" });
+
+            // 1) ابحث بالإيميل أو الهاتف
             var user = await _context.Users.FirstOrDefaultAsync(u =>
-                u.Email == request.EmailOrPhone ||
-                u.Phone == request.EmailOrPhone
-            );
+                u.Email == input || (u.Phone != null && u.Phone == input));
 
             if (user == null)
                 return Unauthorized(new { message = "Invalid email/phone or password" });
 
-            if (user.PasswordHash != HashPassword(request.Password))
-                return Unauthorized(new { message = "Invalid email/phone or password" });
+            // 2) تحقق الباسورد (SHA256)
+            bool ok = BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash);
 
-            // إذا كان Driver: رجّعي حالة التحقق
+            if (!ok)
+                return Unauthorized(new { message = "Invalid email/phone or password" });
+            // 3) إذا كان Driver: رجّع IsVerified
             bool? isVerified = null;
             if (user.Role == UserRole.Driver)
             {
@@ -116,16 +132,57 @@ namespace UniRide.PL.Controllers
                 isVerified = driver?.IsVerified;
             }
 
+            // 4) Token + Expiry (RememberMe)
+            int minutes = int.Parse(_config["Jwt:DurationInMinutes"]!);
+            if (request.RememberMe)
+                minutes = Math.Max(minutes, 60 * 24 * 7); // أسبوع
+
+            var expiresAtUtc = DateTime.UtcNow.AddMinutes(minutes);
+            var token = GenerateJwtToken(user, expiresAtUtc);
+
             return Ok(new AuthResponseDto
             {
                 UserId = user.Id,
                 FullName = user.FullName,
                 Email = user.Email,
+                Phone = user.Phone,
                 Role = user.Role.ToString(),
                 Status = user.Status.ToString(),
                 IsVerified = isVerified,
+                Token = token,
+                ExpiresAtUtc = expiresAtUtc,
                 Message = "Logged in successfully"
             });
+        }
+
+        // ===================== Helpers =====================
+
+        private string GenerateJwtToken(User user, DateTime expiresAtUtc)
+        {
+            var keyBytes = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+            var key = new SymmetricSecurityKey(keyBytes);
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString())
+            };
+
+            // (اختياري) لو بدك Status كـ claim
+            // claims.Add(new Claim("status", user.Status.ToString()));
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: expiresAtUtc,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
         private static string HashPassword(string password)
