@@ -19,7 +19,7 @@ namespace UniRide.PL.DTO.Auth
         public string Password { get; set; } = null!;
 
         [Required]
-        [Compare("Password")]
+        [Compare("Password", ErrorMessage = "Passwords do not match.")]
         public string ConfirmPassword { get; set; } = null!;
 
 
@@ -31,7 +31,7 @@ namespace UniRide.PL.DTO.Auth
         public string VehiclePlateNumber { get; set; } = null!;
 
         [Required]
-        public string VehicleModel { get; set; } = null!;
+        public string VehicleType { get; set; } = null!;
 
         [Required, Range(1, 50)]
         public int NumberOfSeats { get; set; }

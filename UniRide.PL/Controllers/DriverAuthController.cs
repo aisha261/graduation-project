@@ -1,5 +1,8 @@
 ﻿using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
 using UniRide.DAL.Data;
@@ -15,11 +18,13 @@ namespace UniRide.PL.Controllers
     {
         private readonly ApplicationDbContext _context;
         private readonly IWebHostEnvironment _env;
+        private readonly IConfiguration _config;
 
-        public DriverAuthController(ApplicationDbContext context, IWebHostEnvironment env)
+        public DriverAuthController(ApplicationDbContext context, IWebHostEnvironment env, IConfiguration config)
         {
             _context = context;
             _env = env;
+            _config = config;
         }
 
         // POST: /api/driver-auth/register
@@ -42,6 +47,7 @@ namespace UniRide.PL.Controllers
             {
                 return BadRequest(new { message = "Driver license, vehicle registration, and driver photo are required." });
             }
+            
 
             // منع تكرار Email
             bool emailExists = await _context.Users.AnyAsync(u => u.Email == request.Email);
@@ -63,14 +69,16 @@ namespace UniRide.PL.Controllers
             string photoUrl = await SaveUploadAsync(request.DriverPhoto, "uploads/driver_photos");
 
             // ====== 3) Create User ======
+            // ✅ السائق يسجل ويكون Pending لحد موافقة المشرف
+
             var user = new User
             {
                 FullName = request.FullName,
                 Email = request.Email,
                 Phone = request.Phone,
-                PasswordHash = HashPassword(request.Password),
+                PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.Password),
                 Role = UserRole.Driver,
-                Status = AccountStatus.Active // إذا بدكم Pending للسائق عدّليها
+                Status = AccountStatus.Pending// إذا بدكم Pending للسائق عدّليها
             };
 
             _context.Users.Add(user);
@@ -82,11 +90,11 @@ namespace UniRide.PL.Controllers
                 UserId = user.Id,
                 LicenseNumber = request.DriverLicenseNumber,
                 VehiclePlate = request.VehiclePlateNumber,
-                VehicleModel = request.VehicleModel,
+                VehicleType = request.VehicleType,
                 DriverLicenseImageUrl = licenseUrl,
                 VehicleRegistrationImageUrl = registrationUrl,
                 DriverPhotoUrl = photoUrl,
-                AvailabilityStatus = DriverAvailabilityStatus.Inactive,
+                AvailabilityStatus = DriverAvailabilityStatus.Inactive, // غير فعال قبل الموافقة
                 IsVerified = false,
                 RejectionReason = null
             };
@@ -94,15 +102,23 @@ namespace UniRide.PL.Controllers
             _context.DriverProfiles.Add(driverProfile);
             await _context.SaveChangesAsync();
 
+            // ====== 5) Generate Token (حتى يقدر يعمل Login/Me ويشوف Pending screen) ======
+            int minutes = int.Parse(_config["Jwt:DurationInMinutes"]!);
+            var expiresAtUtc = DateTime.UtcNow.AddMinutes(minutes);
+            var token = GenerateJwtToken(user, expiresAtUtc);
+
+
             // ====== 5) Response ======
             return Ok(new AuthResponseDto
             {
                 UserId = user.Id,
                 FullName = user.FullName,
                 Email = user.Email,
+                Phone = user.Phone,
                 Role = user.Role.ToString(),
                 Status = user.Status.ToString(),
                 IsVerified = driverProfile.IsVerified,
+                Token = token,
                 Message = "Driver registered successfully. Waiting for supervisor verification."
             });
         }
@@ -130,11 +146,32 @@ namespace UniRide.PL.Controllers
             return "/" + relativeFolder.TrimEnd('/') + "/" + fileName;
         }
 
-        private static string HashPassword(string password)
+        // Helper: Generate JWT (نفس AuthController)
+        // =========================
+        private string GenerateJwtToken(User user, DateTime expiresAtUtc)
         {
-            using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToHexString(bytes);
+            var keyBytes = Encoding.UTF8.GetBytes(_config["Jwt:Key"]!);
+            var key = new SymmetricSecurityKey(keyBytes);
+            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
+
+            var claims = new List<Claim>
+            {
+                new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+                new Claim(ClaimTypes.Name, user.FullName),
+                new Claim(ClaimTypes.Email, user.Email),
+                new Claim(ClaimTypes.Role, user.Role.ToString())
+            };
+
+            var token = new JwtSecurityToken(
+                issuer: _config["Jwt:Issuer"],
+                audience: _config["Jwt:Audience"],
+                claims: claims,
+                expires: expiresAtUtc,
+                signingCredentials: creds
+            );
+
+            return new JwtSecurityTokenHandler().WriteToken(token);
         }
     }
 }
+    

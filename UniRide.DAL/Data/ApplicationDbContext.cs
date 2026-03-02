@@ -40,7 +40,13 @@ namespace UniRide.DAL.Data
             modelBuilder.Entity<User>()
                 .HasIndex(u => u.Email)
                 .IsUnique();
+
+            modelBuilder.Entity<User>()
+             .HasIndex(u => u.Phone)
+             .IsUnique()
+             .HasFilter("[Phone] IS NOT NULL");
         }
+
 
     }
 }

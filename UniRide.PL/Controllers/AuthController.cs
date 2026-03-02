@@ -1,4 +1,5 @@
-﻿using Microsoft.AspNetCore.Mvc;
+﻿using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
@@ -46,6 +47,12 @@ namespace UniRide.PL.Controllers
             if (!Enum.TryParse<UserRole>(request.Role, ignoreCase: true, out var role))
                 return BadRequest(new { message = "Invalid role" });
 
+
+            // 4) ✅ هنا نمنع تسجيل Driver من هذا الـ endpoint
+            // لأن تسجيل السائق له endpoint خاص (multipart + uploads)
+            if (role == UserRole.Driver)
+                return BadRequest(new { message = "Use /api/driver-auth/register for driver registration." });
+
             // 4) إنشاء User
             var user = new User
             {
@@ -60,26 +67,15 @@ namespace UniRide.PL.Controllers
             _context.Users.Add(user);
             await _context.SaveChangesAsync();
 
-            // 5) إذا Driver: إنشاء DriverProfile مبدئيًا
-            bool? isVerified = null;
-
-            if (role == UserRole.Driver)
+            if ((role == UserRole.Student || role == UserRole.Doctor) && !string.IsNullOrWhiteSpace(request.UniversityId))
             {
-                var driverProfile = new DriverProfile
+                _context.AcademicProfiles.Add(new AcademicProfile
                 {
                     UserId = user.Id,
-                    LicenseNumber = "PENDING",
-                    VehiclePlate = "PENDING",
-                    VehicleModel = "PENDING",
-                    DriverPhotoUrl = "PENDING",
-                    AvailabilityStatus = DriverAvailabilityStatus.Inactive,
-                    IsVerified = false
-                };
-
-                _context.DriverProfiles.Add(driverProfile);
+                    UniversityId = request.UniversityId.Trim(),
+                    RewardPointsTotal = 0
+                });
                 await _context.SaveChangesAsync();
-
-                isVerified = driverProfile.IsVerified;
             }
 
             // 6) Response (بدون توكن عادة بالتسجيل)
@@ -91,7 +87,7 @@ namespace UniRide.PL.Controllers
                 Phone = user.Phone,
                 Role = user.Role.ToString(),
                 Status = user.Status.ToString(),
-                IsVerified = isVerified,
+                IsVerified = null,
                 Token = string.Empty,
                 ExpiresAtUtc = DateTime.UtcNow,
                 Message = "Registered successfully"
@@ -140,6 +136,36 @@ namespace UniRide.PL.Controllers
             var expiresAtUtc = DateTime.UtcNow.AddMinutes(minutes);
             var token = GenerateJwtToken(user, expiresAtUtc);
 
+
+            // 5) منطق الحالة حسب الدور
+            // Student/Doctor: لازم Active
+            if (user.Role != UserRole.Driver && user.Status != AccountStatus.Active)
+                return Unauthorized(new { message = "Your account is not active." });
+
+            // Driver: لو Pending مسموح الدخول لكن رسالة انتظار
+            if (user.Role == UserRole.Driver && user.Status == AccountStatus.Pending)
+            {
+
+                return Ok(new AuthResponseDto
+                {
+                    UserId = user.Id,
+                    FullName = user.FullName,
+                    Email = user.Email,
+                    Phone = user.Phone,
+                    Role = user.Role.ToString(),
+                    Status = user.Status.ToString(),
+                    IsVerified = isVerified,
+                    Token = token,
+                    ExpiresAtUtc = expiresAtUtc,
+                    Message = "Your account is pending supervisor verification."
+                });
+            }
+
+            // Driver: لو Blocked ممنوع
+            if (user.Role == UserRole.Driver && user.Status == AccountStatus.Blocked)
+                return Unauthorized(new { message = "Your account is blocked." });
+
+
             return Ok(new AuthResponseDto
             {
                 UserId = user.Id,
@@ -154,6 +180,43 @@ namespace UniRide.PL.Controllers
                 Message = "Logged in successfully"
             });
         }
+
+        // =========================
+        // GET: /api/auth/me
+        // ✅ يرجع بيانات المستخدم الحالي من التوكن
+        // =========================
+        [HttpGet("me")]
+        [Authorize]
+        public async Task<IActionResult> Me()
+        {
+            // نقرأ userId من الـ claim (NameIdentifier)
+            var idStr = User.Claims.FirstOrDefault(c => c.Type == ClaimTypes.NameIdentifier)?.Value;
+            if (string.IsNullOrWhiteSpace(idStr) || !int.TryParse(idStr, out var userId))
+                return Unauthorized(new { message = "Invalid token." });
+
+            var user = await _context.Users.AsNoTracking().FirstOrDefaultAsync(u => u.Id == userId);
+            if (user == null) return NotFound(new { message = "User not found." });
+
+            bool? isVerified = null;
+            if (user.Role == UserRole.Driver)
+            {
+                var driver = await _context.DriverProfiles.AsNoTracking().FirstOrDefaultAsync(d => d.UserId == user.Id);
+                isVerified = driver?.IsVerified;
+            }
+
+            return Ok(new
+            {
+                user.Id,
+                user.FullName,
+                user.Email,
+                user.Phone,
+                Role = user.Role.ToString(),
+                Status = user.Status.ToString(),
+                IsVerified = isVerified
+            });
+        }
+
+
 
         // ===================== Helpers =====================
 
@@ -185,11 +248,6 @@ namespace UniRide.PL.Controllers
             return new JwtSecurityTokenHandler().WriteToken(token);
         }
 
-        private static string HashPassword(string password)
-        {
-            using var sha = SHA256.Create();
-            var bytes = sha.ComputeHash(Encoding.UTF8.GetBytes(password));
-            return Convert.ToHexString(bytes);
-        }
+        
     }
 }

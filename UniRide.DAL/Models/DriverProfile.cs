@@ -12,7 +12,9 @@ namespace UniRide.DAL.Models
         public User User { get; set; } = null!;
         public string LicenseNumber { get; set; } = null!;
         public string VehiclePlate { get; set; } = null!;
-        public string VehicleModel { get; set; } = null!;
+        public string VehicleType { get; set; } = null!;
+        public int NumberOfSeats { get; set; }
+
         public string? DriverLicenseImageUrl { get; set; }
         public string? VehicleRegistrationImageUrl { get; set; }
         public string DriverPhotoUrl { get; set; } = null!;

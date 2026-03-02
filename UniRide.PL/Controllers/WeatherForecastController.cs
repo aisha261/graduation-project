@@ -1,5 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
-using UniRide.BLL;
+using UniRide.PL;
 
 namespace UniRide.PL.Controllers
 {
